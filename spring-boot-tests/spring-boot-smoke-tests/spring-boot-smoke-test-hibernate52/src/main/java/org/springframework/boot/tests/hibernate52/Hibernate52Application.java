@@ -19,10 +19,13 @@ package org.springframework.boot.tests.hibernate52;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
+// @SpringBootApplication等同于@Configuration @ComponentScan @EnableAutoConfiguration
 @SpringBootApplication
 public class Hibernate52Application {
 
 	public static void main(String[] args) {
+		//SpringApplication：
+		// Hibernate52Application.class
 		SpringApplication.run(Hibernate52Application.class, args);
 	}
 

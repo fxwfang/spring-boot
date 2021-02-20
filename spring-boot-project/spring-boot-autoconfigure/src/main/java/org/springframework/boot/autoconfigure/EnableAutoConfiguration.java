@@ -80,16 +80,19 @@ import org.springframework.core.io.support.SpringFactoriesLoader;
 @Documented
 @Inherited
 @AutoConfigurationPackage
-@Import(AutoConfigurationImportSelector.class)
+// 重点： AutoConfigurationImportSelector
+@Import(AutoConfigurationImportSelector.class) // 导入selector,识别各组件中的AutoConfigutaion类并装载到容器中
 public @interface EnableAutoConfiguration {
 
 	/**
+	 * 自动装配开关，默认是true,可以在application.properties中设置
 	 * Environment property that can be used to override when auto-configuration is
 	 * enabled.
 	 */
 	String ENABLED_OVERRIDE_PROPERTY = "spring.boot.enableautoconfiguration";
 
 	/**
+	 * 不需要装配的bean
 	 * Exclude specific auto-configuration classes such that they will never be applied.
 	 * @return the classes to exclude
 	 */

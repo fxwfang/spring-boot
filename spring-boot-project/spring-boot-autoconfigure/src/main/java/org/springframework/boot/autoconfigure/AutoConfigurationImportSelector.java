@@ -59,6 +59,10 @@ import org.springframework.util.ClassUtils;
 import org.springframework.util.StringUtils;
 
 /**
+ *    该类实现ImportSelector接口，最重要的是实现selectImports方法，
+ *  该方法的起到的作用是，根据配置文件（spring.factories），将需要注入到容器的bean注入到容器。
+ *  资料： http://autumn200.com/2020/06/27/spring-boot-autoconfig/
+ *
  * {@link DeferredImportSelector} to handle {@link EnableAutoConfiguration
  * auto-configuration}. This class can also be subclassed if a custom variant of
  * {@link EnableAutoConfiguration @EnableAutoConfiguration} is needed.
@@ -93,9 +97,12 @@ public class AutoConfigurationImportSelector implements DeferredImportSelector, 
 
 	@Override
 	public String[] selectImports(AnnotationMetadata annotationMetadata) {
-		if (!isEnabled(annotationMetadata)) {
+		// 判断自动装配开关是否打开
+		if (!isEnabled(annotationMetadata)) { // 没有使用@EnableXXX注解，就不导入组件
 			return NO_IMPORTS;
 		}
+
+		// 获得需要装配的bean
 		AutoConfigurationEntry autoConfigurationEntry = getAutoConfigurationEntry(annotationMetadata);
 		return StringUtils.toStringArray(autoConfigurationEntry.getConfigurations());
 	}
@@ -119,14 +126,25 @@ public class AutoConfigurationImportSelector implements DeferredImportSelector, 
 		if (!isEnabled(annotationMetadata)) {
 			return EMPTY_ENTRY;
 		}
+		// 获取EnableAutoConfiguration中的参数，exclude()/excludeName()
 		AnnotationAttributes attributes = getAttributes(annotationMetadata);
+		// 获取需要自动装配的所有配置类，读取META-INF/spring.factories
 		List<String> configurations = getCandidateConfigurations(annotationMetadata, attributes);
+		// 去重
 		configurations = removeDuplicates(configurations);
+		// 从EnableAutoConfiguration的exclude/excludeName属性中获取排除项
 		Set<String> exclusions = getExclusions(annotationMetadata, attributes);
+		// 检查需要排除的类是否在configurations中，不在报错
 		checkExcludedClasses(configurations, exclusions);
+		// 从configurations去除exclusions
 		configurations.removeAll(exclusions);
+		// 对configurations进行过滤，剔除掉@Conditional条件不成立的配置类
+		// @Configuration其实是依托于其它的框架来加载的，如果当前classpath下没有相关的依赖，则意味着这些类没必要加载，所以通过这种条件过滤可以有效的减少@Configuration类的数量从而降低启动时间。
+		// META-INF/spring-autoconfigure-metadata.properties 存储该组件装载配置类时的全部过滤条件。
 		configurations = getConfigurationClassFilter().filter(configurations);
+		// 把AutoConfigurationImportEvent绑定在所有AutoConfigurationImportListener子类实例上
 		fireAutoConfigurationImportEvents(configurations, exclusions);
+		// 返回(configurations, exclusions)组
 		return new AutoConfigurationEntry(configurations, exclusions);
 	}
 
@@ -175,6 +193,8 @@ public class AutoConfigurationImportSelector implements DeferredImportSelector, 
 	 * @return a list of candidate configurations
 	 */
 	protected List<String> getCandidateConfigurations(AnnotationMetadata metadata, AnnotationAttributes attributes) {
+		// 扫描所有具有META-INF/spring.factories的jar包。spring-boot-autoconfigure-x.x.x.jar就有一个这样的spring.factories文件
+		// 将文件下的所有配置都封装成一个URL对象封装进枚举中
 		List<String> configurations = SpringFactoriesLoader.loadFactoryNames(getSpringFactoriesLoaderFactoryClass(),
 				getBeanClassLoader());
 		Assert.notEmpty(configurations, "No auto configuration classes found in META-INF/spring.factories. If you "
@@ -358,6 +378,7 @@ public class AutoConfigurationImportSelector implements DeferredImportSelector, 
 		private final List<AutoConfigurationImportFilter> filters;
 
 		ConfigurationClassFilter(ClassLoader classLoader, List<AutoConfigurationImportFilter> filters) {
+			// 在私有静态内部类ConfigurationClassFilter的构造器中初始化读取META-INF/spring-autoconfigure-metadata.properties
 			this.autoConfigurationMetadata = AutoConfigurationMetadataLoader.loadMetadata(classLoader);
 			this.filters = filters;
 		}
@@ -426,6 +447,7 @@ public class AutoConfigurationImportSelector implements DeferredImportSelector, 
 
 		@Override
 		public void process(AnnotationMetadata annotationMetadata, DeferredImportSelector deferredImportSelector) {
+			// @EnableAutoConfiguration注解，该注解起到打开自动装配总开关的作用。
 			Assert.state(deferredImportSelector instanceof AutoConfigurationImportSelector,
 					() -> String.format("Only %s implementations are supported, got %s",
 							AutoConfigurationImportSelector.class.getSimpleName(),

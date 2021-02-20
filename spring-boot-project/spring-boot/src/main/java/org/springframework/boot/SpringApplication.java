@@ -278,12 +278,13 @@ public class SpringApplication {
 	public SpringApplication(ResourceLoader resourceLoader, Class<?>... primarySources) {
 		this.resourceLoader = resourceLoader;
 		Assert.notNull(primarySources, "PrimarySources must not be null");
-		this.primarySources = new LinkedHashSet<>(Arrays.asList(primarySources));
+		this.primarySources = new LinkedHashSet<>(Arrays.asList(primarySources)); //primarySources 传递进来的main方法所在的类
 		this.webApplicationType = WebApplicationType.deduceFromClasspath();
 		this.bootstrappers = new ArrayList<>(getSpringFactoriesInstances(Bootstrapper.class));
 		setInitializers((Collection) getSpringFactoriesInstances(ApplicationContextInitializer.class));
 		setListeners((Collection) getSpringFactoriesInstances(ApplicationListener.class));
-		this.mainApplicationClass = deduceMainApplicationClass();
+		this.mainApplicationClass = deduceMainApplicationClass(); //通过调用栈信息,推断main主类
+		//为什么有primarySources了，还需要自己找mainApplicationClass？
 	}
 
 	private Class<?> deduceMainApplicationClass() {
@@ -309,21 +310,22 @@ public class SpringApplication {
 	 */
 	public ConfigurableApplicationContext run(String... args) {
 		StopWatch stopWatch = new StopWatch();
-		stopWatch.start();
+		stopWatch.start(); // 设置启动时间
 		DefaultBootstrapContext bootstrapContext = createBootstrapContext();
 		ConfigurableApplicationContext context = null;
-		configureHeadlessProperty();
+		configureHeadlessProperty(); // 设置headless系统属性
 		SpringApplicationRunListeners listeners = getRunListeners(args);
-		listeners.starting(bootstrapContext, this.mainApplicationClass);
+		listeners.starting(bootstrapContext, this.mainApplicationClass); //注册监听器
 		try {
 			ApplicationArguments applicationArguments = new DefaultApplicationArguments(args);
 			ConfigurableEnvironment environment = prepareEnvironment(listeners, bootstrapContext, applicationArguments);
 			configureIgnoreBeanInfo(environment);
-			Banner printedBanner = printBanner(environment);
-			context = createApplicationContext();
+			Banner printedBanner = printBanner(environment); // 打印Banner
+			context = createApplicationContext(); //创建上下文应用对象
 			context.setApplicationStartup(this.applicationStartup);
+			//重要： 准备上下文。把启动类设置到beanFactory.beanDefinitionMap中,以便后续类加载时，对主启动类进行加载
 			prepareContext(bootstrapContext, context, environment, listeners, applicationArguments, printedBanner);
-			refreshContext(context);
+			refreshContext(context); // 类似spring的refresh
 			afterRefresh(context, applicationArguments);
 			stopWatch.stop();
 			if (this.logStartupInfo) {
@@ -395,7 +397,7 @@ public class SpringApplication {
 			logStartupProfileInfo(context);
 		}
 		// Add boot specific singleton beans
-		ConfigurableListableBeanFactory beanFactory = context.getBeanFactory();
+		ConfigurableListableBeanFactory beanFactory = context.getBeanFactory(); // 创建对象工厂
 		beanFactory.registerSingleton("springApplicationArguments", applicationArguments);
 		if (printedBanner != null) {
 			beanFactory.registerSingleton("springBootBanner", printedBanner);
@@ -407,10 +409,10 @@ public class SpringApplication {
 		if (this.lazyInitialization) {
 			context.addBeanFactoryPostProcessor(new LazyInitializationBeanFactoryPostProcessor());
 		}
-		// Load the sources
+		// Load the sources 重要
 		Set<Object> sources = getAllSources();
 		Assert.notEmpty(sources, "Sources must not be empty");
-		load(context, sources.toArray(new Object[0]));
+		load(context, sources.toArray(new Object[0])); // 将启动类加载到beanFactory.beanDefinitionMap中
 		listeners.contextLoaded(context);
 	}
 

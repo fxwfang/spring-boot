@@ -139,15 +139,15 @@ class BeanDefinitionLoader {
 
 	private void load(Object source) {
 		Assert.notNull(source, "Source must not be null");
-		if (source instanceof Class<?>) {
+		if (source instanceof Class<?>) { //类
 			load((Class<?>) source);
 			return;
 		}
-		if (source instanceof Resource) {
+		if (source instanceof Resource) { // 资源
 			load((Resource) source);
 			return;
 		}
-		if (source instanceof Package) {
+		if (source instanceof Package) { //包
 			load((Package) source);
 			return;
 		}
@@ -164,7 +164,7 @@ class BeanDefinitionLoader {
 			GroovyBeanDefinitionSource loader = BeanUtils.instantiateClass(source, GroovyBeanDefinitionSource.class);
 			((GroovyBeanDefinitionReader) this.groovyReader).beans(loader.getBeans());
 		}
-		if (isEligible(source)) {
+		if (isEligible(source)) { // 是否合法
 			this.annotatedReader.register(source);
 		}
 	}
